@@ -2,10 +2,10 @@ const Groq = require('groq-sdk');
 const { safeParse } = require('./aiResponse');
 
 const SETUP_QUESTIONS = [
-  { 
-    id: "COMFORT", 
-    intent: "COMFORT", 
-    category: "SETUP", 
+  {
+    id: "COMFORT",
+    intent: "COMFORT",
+    category: "SETUP",
     defaultText: "Hello, I am your digital clinician. How are you feeling today?",
     translations: {
       en: "Hello, I am your digital clinician. How are you feeling today?",
@@ -16,10 +16,10 @@ const SETUP_QUESTIONS = [
 ];
 
 const SCORED_QUESTIONS = [
-  { 
-    id: "AGE", 
-    intent: "AGE", 
-    category: "Demographic/context", 
+  {
+    id: "AGE",
+    intent: "AGE",
+    category: "Demographic/context",
     defaultText: "Could you tell me your age or date of birth?",
     translations: {
       en: "Could you tell me your age or date of birth?",
@@ -27,10 +27,10 @@ const SCORED_QUESTIONS = [
       hi: "क्या आप मुझे अपनी आयु या जन्म तिथि बता सकते हैं?"
     }
   },
-  { 
-    id: "ORIENTATION", 
-    intent: "ORIENTATION", 
-    category: "Orientation", 
+  {
+    id: "ORIENTATION",
+    intent: "ORIENTATION",
+    category: "Orientation",
     defaultText: "To get started, could you tell me what today's date is and what city or place you are in right now?",
     translations: {
       en: "To get started, could you tell me what today's date is and what city or place you are in right now?",
@@ -38,10 +38,10 @@ const SCORED_QUESTIONS = [
       hi: "शुरुआत करने के लिए, क्या आप मुझे बता सकते हैं कि आज की तारीख क्या है और आप अभी किस शहर या स्थान पर हैं?"
     }
   },
-  { 
-    id: "DAILY_ROUTINE", 
-    intent: "DAILY_ROUTINE", 
-    category: "Daily routine", 
+  {
+    id: "DAILY_ROUTINE",
+    intent: "DAILY_ROUTINE",
+    category: "Daily routine",
     defaultText: "Can you describe something you usually do during a normal day from morning to evening?",
     translations: {
       en: "Can you describe something you usually do during a normal day from morning to evening?",
@@ -49,10 +49,10 @@ const SCORED_QUESTIONS = [
       hi: "क्या आप बता सकते हैं कि आप आमतौर पर सुबह से शाम तक सामान्य दिन में क्या करते हैं?"
     }
   },
-  { 
-    id: "RECENT_MEMORY", 
-    intent: "RECENT_MEMORY", 
-    category: "Recent memory", 
+  {
+    id: "RECENT_MEMORY",
+    intent: "RECENT_MEMORY",
+    category: "Recent memory",
     defaultText: "What is one thing you remember doing yesterday or recently?",
     translations: {
       en: "What is one thing you remember doing yesterday or recently?",
@@ -60,10 +60,10 @@ const SCORED_QUESTIONS = [
       hi: "ऐसी कौन सी एक बात है जो आपको कल या हाल ही में करने की याद है?"
     }
   },
-  { 
-    id: "ATTENTION", 
-    intent: "ATTENTION", 
-    category: "Attention", 
+  {
+    id: "ATTENTION",
+    intent: "ATTENTION",
+    category: "Attention",
     defaultText: "When you are doing normal activities like reading, working, or watching TV, how easy is it for you to stay focused?",
     translations: {
       en: "When you are doing normal activities like reading, working, or watching TV, how easy is it for you to stay focused?",
@@ -71,10 +71,10 @@ const SCORED_QUESTIONS = [
       hi: "पढ़ने, काम करने या टीवी देखने जैसी सामान्य गतिविधियाँ करते समय, ध्यान केंद्रित रखना आपके लिए कितना आसान है?"
     }
   },
-  { 
-    id: "LANGUAGE", 
-    intent: "LANGUAGE", 
-    category: "Language", 
+  {
+    id: "LANGUAGE",
+    intent: "LANGUAGE",
+    category: "Language",
     defaultText: "Do you sometimes have difficulty finding the right word when speaking or writing?",
     translations: {
       en: "Do you sometimes have difficulty finding the right word when speaking or writing?",
@@ -82,10 +82,10 @@ const SCORED_QUESTIONS = [
       hi: "क्या बोलते या लिखते समय आपको कभी-कभी सही शब्द खोजने में कठिनाई होती है?"
     }
   },
-  { 
-    id: "EVERYDAY_MEMORY", 
-    intent: "EVERYDAY_MEMORY", 
-    category: "Prospective memory", 
+  {
+    id: "EVERYDAY_MEMORY",
+    intent: "EVERYDAY_MEMORY",
+    category: "Prospective memory",
     defaultText: "Do you ever forget where you placed things, forget appointments, or need reminders for everyday tasks?",
     translations: {
       en: "Do you ever forget where you placed things, forget appointments, or need reminders for everyday tasks?",
@@ -96,11 +96,11 @@ const SCORED_QUESTIONS = [
 ];
 
 const TIMING_THRESHOLDS = {
-  "≤20 years":   { FAST: 4, EXPECTED: [4, 11], SLOW: [11, 18] },
+  "≤20 years": { FAST: 4, EXPECTED: [4, 11], SLOW: [11, 18] },
   "21–50 years": { FAST: 5, EXPECTED: [5, 13], SLOW: [13, 22] },
   "51–70 years": { FAST: 6, EXPECTED: [6, 16], SLOW: [16, 26] },
-  "71–100 years":{ FAST: 8, EXPECTED: [8, 20], SLOW: [20, 32] },
-  "Unknown":     { FAST: 6, EXPECTED: [6, 15], SLOW: [15, 25] }
+  "71–100 years": { FAST: 8, EXPECTED: [8, 20], SLOW: [20, 32] },
+  "Unknown": { FAST: 6, EXPECTED: [6, 15], SLOW: [15, 25] }
 };
 
 const CATEGORY_MULTIPLIERS = {
@@ -179,15 +179,15 @@ class AssessmentEngine {
       this.history = [];
       this.age = null;
       this.ageBand = "Unknown";
-      
+
       const currentQuestion = SETUP_QUESTIONS[0];
       this.lastQuestionWording = this.getLocalizedQuestion(currentQuestion, activeLang);
       this.history.push({ role: "assistant", text: this.lastQuestionWording });
-      return { 
-        type: "question", 
-        acknowledgement: null, 
-        question: this.lastQuestionWording, 
-        isComplete: false 
+      return {
+        type: "question",
+        acknowledgement: null,
+        question: this.lastQuestionWording,
+        isComplete: false
       };
     }
 
@@ -195,11 +195,11 @@ class AssessmentEngine {
       const closingAck = activeLang === "ta"
         ? "பகிர்ந்தமைக்கு நன்றி. நமது உரையாடல் பரிசோதனை நிறைவடைந்தது."
         : (activeLang === "hi"
-            ? "साझा करने के लिए धन्यवाद। हमारा संवादात्मक मूल्यांकन पूरा हो गया है।"
-            : "Thank you for sharing that with me. We have completed the conversational screening.");
-      return { 
-        type: "complete", 
-        conversation_complete: true, 
+          ? "साझा करने के लिए धन्यवाद। हमारा संवादात्मक मूल्यांकन पूरा हो गया है।"
+          : "Thank you for sharing that with me. We have completed the conversational screening.");
+      return {
+        type: "complete",
+        conversation_complete: true,
         acknowledgement: closingAck,
         timingData: this.timingData
       };
@@ -208,13 +208,13 @@ class AssessmentEngine {
     const isSetup = this.currentPhase === "SETUP";
     const questionsArray = isSetup ? SETUP_QUESTIONS : SCORED_QUESTIONS;
     const currentQuestion = questionsArray[this.currentQuestionIndex];
-    
+
     let timingRecord = null;
     if (!isSetup) {
       const timeClassification = this.classifyTiming(this.ageBand, currentQuestion.category, responseTimeMs);
       const answerTimestamp = Date.now();
       const questionTimestamp = responseTimeMs ? answerTimestamp - responseTimeMs : null;
-      
+
       timingRecord = {
         question_id: currentQuestion.id,
         question_number: this.currentQuestionIndex + 1,
@@ -236,7 +236,7 @@ class AssessmentEngine {
       };
       this.timingData.push(timingRecord);
     }
-    
+
     this.history.push({ role: "user", text: userMessage });
 
     const isLastQuestion = this.currentQuestionIndex === questionsArray.length - 1;
@@ -291,17 +291,17 @@ Output STRICT JSON ONLY:
       });
 
       const timeoutPromise = new Promise((_, reject) =>
-        setTimeout(() => reject(new Error("Groq conversational completion timed out")), 2500)
+        setTimeout(() => reject(new Error("Groq conversational completion timed out")), 5000)
       );
 
       const res = await Promise.race([groqCall, timeoutPromise]);
-      extracted = safeParse(res.choices[0].message.content, { 
-        extracted_value: null, acknowledgement: "" 
+      extracted = safeParse(res.choices[0].message.content, {
+        extracted_value: null, acknowledgement: ""
       });
     } catch (err) {
       console.error("Conversational LLM notice (fast fallback activated):", err.message);
       const defaultAck = activeLang === "ta" ? "நான் புரிந்து கொண்டேன்." : (activeLang === "hi" ? "मैं समझता हूँ।" : "I understand.");
-      extracted = { 
+      extracted = {
         extracted_value: userMessage, acknowledgement: defaultAck
       };
     }
@@ -333,12 +333,12 @@ Output STRICT JSON ONLY:
 
     this.lastQuestionWording = nextQuestion ? this.getLocalizedQuestion(nextQuestion, activeLang) : "";
     const combinedReply = extracted.acknowledgement ? `${extracted.acknowledgement} ${this.lastQuestionWording}` : this.lastQuestionWording;
-    
+
     if (nextQuestion) {
       this.history.push({ role: "assistant", text: combinedReply });
       return {
         type: "question",
-        acknowledgement: extracted.acknowledgement, 
+        acknowledgement: extracted.acknowledgement,
         question: this.lastQuestionWording,
         isComplete: false
       };
@@ -347,8 +347,8 @@ Output STRICT JSON ONLY:
       const finalMsg = activeLang === "ta"
         ? "உங்கள் அனுபவங்களை என்னுடன் பகிர்ந்து கொண்டதற்கு மிக்க நன்றி. நமது உரையாடல் பரிசோதனை நிறைவடைந்தது."
         : (activeLang === "hi"
-            ? "अपने अनुभव मेरे साथ साझा करने के लिए बहुत-बहुत धन्यवाद। हमारा संवादात्मक मूल्यांकन पूरा हो गया है।"
-            : "Thank you so much for sharing your experiences with me. We have finished our conversational screening.");
+          ? "अपने अनुभव मेरे साथ साझा करने के लिए बहुत-बहुत धन्यवाद। हमारा संवादात्मक मूल्यांकन पूरा हो गया है।"
+          : "Thank you so much for sharing your experiences with me. We have finished our conversational screening.");
       const fullClosing = extracted.acknowledgement ? `${extracted.acknowledgement} ${finalMsg}` : finalMsg;
       this.history.push({ role: "assistant", text: fullClosing });
       return {

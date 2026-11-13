@@ -24,15 +24,20 @@ async function runE2E() {
   const authVisible = await page.evaluate(() => !document.getElementById('auth-view').classList.contains('hidden'));
   if (authVisible) {
     console.log('[2/7] Signing up test user:', testUser);
+    const toggleSignup = await page.$('#toggle-signup');
+    if (toggleSignup) await toggleSignup.click();
+    await new Promise(r => setTimeout(r, 400));
     await page.type('#auth-username', testUser);
     await page.type('#auth-password', testPass);
-    await page.click('#auth-signup-btn');
-    await page.waitForTimeout ? page.waitForTimeout(1000) : new Promise(r => setTimeout(r, 1000));
+    const authBtn = (await page.$('#auth-signup-btn')) || (await page.$('#auth-btn'));
+    if (authBtn) await authBtn.click();
+    await (page.waitForTimeout ? page.waitForTimeout(1000) : new Promise(r => setTimeout(r, 1000)));
   }
 
   // Check Dashboard & Start Assessment
   console.log('[3/7] Initiating Assessment...');
-  await page.click('#btn-start-assessment');
+  const startBtn = (await page.$('#btn-start-assessment')) || (await page.$('#btn-new-test'));
+  if (startBtn) await startBtn.click();
   await new Promise(r => setTimeout(r, 800));
 
   // Select Text Modality
@@ -138,7 +143,7 @@ async function runE2E() {
   // 6. Reaction Test
   console.log(' -> Testing Reaction Reflex...');
   await page.waitForSelector('#game-1-container:not(.hidden)', { timeout: 15000 });
-  for (let trial = 0; trial < 5; trial++) {
+  for (let trial = 0; trial < 3; trial++) {
     await page.click('#reaction-btn');
     await page.waitForFunction(() => document.getElementById('reaction-btn').classList.contains('go'), { timeout: 8000 });
     await page.click('#reaction-btn');

@@ -62,6 +62,8 @@
 
     <!-- Picture in Picture Video Feed (Global) -->
     <div id="video-container" class="video-feed hidden">
+      <div id="webgazerVideoContainer" style="display: none !important;" aria-hidden="true"></div>
+      <video id="webgazerVideoFeed" style="display: none !important;" aria-hidden="true"></video>
       <video id="user-video" autoplay muted playsinline></video>
       <div class="recording-indicator hidden" id="rec-dot"></div>
     </div>
@@ -142,6 +144,7 @@
         </div>
 
         <div class="dash-card" id="btn-history">
+            <button id="btn-view-history" style="display: none;" aria-hidden="true"></button>
           <div>
             <div class="card-index">
               <span>(03) / ARCHIVE</span>
@@ -358,6 +361,7 @@
             <i data-feather="check-square" style="width: 16px; height: 16px;"></i>
             <span id="memory-counter-label">Selected: <strong id="memory-counter-num">0</strong> / 5 words</span>
           </div>
+          <div id="memory-game-timer-text" class="subtitle" style="color: #ef4444; font-weight: bold; font-size: 1.1rem; margin-top: 8px; display: none;"></div>
           <div class="memory-grid" id="memory-grid-container"></div>
           <button id="memory-submit-btn" class="btn-primary" style="margin-top: 28px; width: 100%; max-width: 320px;">
             <span>Submit Answers</span>
@@ -683,7 +687,7 @@
               <tr style="border-bottom: 1px solid #e2e8f0;">
                 <td style="padding: 14px 12px;">
                   <strong style="color: #0f172a;">GEOMETRIC PATTERN RECOGNITION</strong><br>
-                  <span style="font-size: 0.78rem; color: #64748b;">12-Question Sequence, Rotation & Matrix Reasoning</span>
+                  <span style="font-size: 0.78rem; color: #64748b;">3-Round Sequence, Rotation & Matrix Reasoning</span>
                 </td>
                 <td style="text-align: center; font-weight: 700; font-size: 1.1rem; color: #0f172a;" id="rep-matrix-pat">--</td>
                 <td style="text-align: center; font-family: var(--font-mono); color: #64748b;" id="rep-baseline-pat">&gt; 70%</td>
@@ -920,6 +924,21 @@
             <div id="rep-explainable-factors-list" style="display: flex; flex-direction: column; gap: 10px; font-size: 0.82rem;">
               <!-- Dynamic explainable contribution bars -->
             </div>
+            <div style="margin-top: 16px; overflow-x: auto;">
+              <table class="clinical-table" style="width: 100%; text-align: left; border-collapse: collapse; font-size: 0.82rem;">
+                <thead>
+                  <tr style="background: #f1f5f9; border-bottom: 2px solid #cbd5e1;">
+                    <th style="padding: 8px; font-weight: 700; color: #334155;">Domain</th>
+                    <th style="padding: 8px; font-weight: 700; color: #334155;">Clinical Indicator</th>
+                    <th style="padding: 8px; font-weight: 700; color: #334155; text-align: center;">Risk Level</th>
+                    <th style="padding: 8px; font-weight: 700; color: #334155;">Clinical Assessment</th>
+                  </tr>
+                </thead>
+                <tbody id="rep-ml-risk-table">
+                  <!-- Dynamic Multi-Domain Risk Analysis Rows -->
+                </tbody>
+              </table>
+            </div>
           </div>
         </div>
 
@@ -1007,6 +1026,7 @@
 
       <!-- Report Action Buttons: Prominent and Easy to Navigate -->
       <div style="display: flex; gap: 16px; margin-top: 28px; width: 100%; justify-content: flex-end; align-items: center; flex-wrap: wrap;">
+        <button id="report-back-btn" style="display: none;" aria-hidden="true"></button>
         <button id="back-dash-btn" class="btn-secondary" style="width: auto; padding: 14px 28px; font-size: 0.95rem; font-weight: 700; cursor: pointer; display: flex; align-items: center; gap: 8px;">
           <i data-feather="arrow-left" style="width: 18px; height: 18px;"></i>
           <span>Return to Dashboard</span>

@@ -382,7 +382,7 @@ function playNextTtsChunk() {
 
   isTtsQueuePlaying = true;
   const nextItem = activeTtsQueue.shift();
-  const ttsUrl = `/api/tts?text=${encodeURIComponent(nextItem.text)}&lang=${nextItem.lang}`;
+  const ttsUrl = `${typeof API_BASE !== "undefined" ? API_BASE : "/api"}/tts?text=${encodeURIComponent(nextItem.text)}&lang=${nextItem.lang}`;
 
   try {
     const audio = new Audio(ttsUrl);
@@ -678,6 +678,7 @@ function switchView(fromViewEl, toViewEl) {
 
 const AssessmentController = {
   currentPhaseIndex: 0,
+  currentPhase: null,
   phases: [
     "PHASE_CONVERSATION",
     "PHASE_MEMORY_REG",
@@ -709,6 +710,11 @@ const AssessmentController = {
     [Views.game, Views.memoryReg, Views.memoryRecall, Views.report, Views.processing].forEach(v => {
       if (v) v.classList.add('hidden');
     });
+    // Video remains hidden during test transitions while continuing background recording
+    const pipTransition = document.getElementById("video-container");
+    if (pipTransition) pipTransition.classList.add("hidden");
+    const liveVideoTransition = document.getElementById("live-video-feed");
+    if (liveVideoTransition) liveVideoTransition.classList.add("hidden");
     switchView(Views.modality, Views.chat);
     Views.chat.classList.remove('hidden');
 
@@ -754,6 +760,25 @@ const AssessmentController = {
     console.log("[ASSESSMENT] phase:start -> " + phaseName);
     this.cleanupPhase();
     document.querySelectorAll(".game-container").forEach(el => el.classList.add("hidden"));
+
+    this.currentPhase = phaseName;
+    const pip = document.getElementById("video-container");
+    const liveVideo = document.getElementById("live-video-feed");
+    const wgOverlay = document.getElementById("webgazerVideoContainer");
+
+    if (phaseName === "PHASE_CONVERSATION") {
+      // In initial intake conversation, show small PiP in right top corner if video mode enabled
+      if (State.assessmentMode === "video" && pip) {
+        pip.classList.remove("hidden");
+        const recDot = document.getElementById("rec-dot");
+        if (recDot) recDot.classList.remove("hidden");
+      }
+    } else {
+      // While attending tests or rounds, DO NOT show video on screen, but keep recording in background!
+      if (pip) pip.classList.add("hidden");
+      if (liveVideo) liveVideo.classList.add("hidden");
+      if (wgOverlay) wgOverlay.style.display = "none";
+    }
 
     switch (phaseName) {
       case "PHASE_CONVERSATION":
@@ -1251,7 +1276,14 @@ document.querySelectorAll(".modality-btn").forEach(btn => {
             chatVideo.autoplay = true;
             chatVideo.playsInline = true;
             chatVideo.muted = true;
-            chatVideoContainer.classList.remove("hidden");
+            // Only show video PiP if currently in PHASE_CONVERSATION
+            if (!AssessmentController.currentPhase || AssessmentController.currentPhase === "PHASE_CONVERSATION") {
+              chatVideoContainer.classList.remove("hidden");
+              const recDot = document.getElementById("rec-dot");
+              if (recDot) recDot.classList.remove("hidden");
+            } else {
+              chatVideoContainer.classList.add("hidden");
+            }
           }
         })
         .catch(err => {
@@ -1438,14 +1470,19 @@ function transitionToGame(gameIndex) {
       }).begin();
 
       setTimeout(() => {
+        try {
+          if (window.webgazer) {
+            if (typeof window.webgazer.showVideo === "function") window.webgazer.showVideo(false);
+            if (typeof window.webgazer.showFaceOverlay === "function") window.webgazer.showFaceOverlay(false);
+            if (typeof window.webgazer.showFaceFeedbackBox === "function") window.webgazer.showFaceFeedbackBox(false);
+            if (typeof window.webgazer.showPredictionPoints === "function") window.webgazer.showPredictionPoints(false);
+          }
+        } catch (e) {}
         const overlay = document.getElementById("webgazerVideoContainer");
-        if (overlay) {
-          overlay.style.top = "60px";
-          overlay.style.left = "10px";
-          overlay.style.transform = "scale(0.5)";
-          overlay.style.transformOrigin = "top left";
-        }
-      }, 1000);
+        if (overlay) overlay.style.display = "none";
+        const wgFeed = document.getElementById("webgazerVideoFeed");
+        if (wgFeed) wgFeed.style.display = "none";
+      }, 300);
     }
 
     // Show recording dot in game view
@@ -1858,13 +1895,38 @@ function transitionToWorkingMemoryGrid() {
     timerEl.style.marginTop = "8px";
     gridArea?.insertBefore(timerEl, document.getElementById("memory-grid-container"));
   }
-  timerEl.textContent = "";
+  if (timerEl) {
+    timerEl.style.display = "block";
+    timerEl.textContent = "";
+  }
+
+  // Safety fallback: ensure choices pool is always populated
+  if (!currentWorkingMemoryChoices || currentWorkingMemoryChoices.length === 0) {
+    const wordsPool = (window.i18n && typeof window.i18n.getWorkingMemoryPool === 'function')
+      ? window.i18n.getWorkingMemoryPool(State.lang)
+      : [
+          "APPLE", "RIVER", "CHAIR", "BREAD", "HOUSE", "TABLE", "GARDEN", "BOOK", "WATER", "HORSE",
+          "SHIRT", "WINDOW", "ORANGE", "FLOWER", "PILLOW", "BRIDGE", "CANDLE", "FOREST", "TRAIN", "CLOCK",
+          "MIRROR", "SILVER", "DOCTOR", "GUITAR", "BUTTER", "MARKET", "OCEAN", "VILLAGE", "CASTLE", "BOTTLE"
+        ];
+    const shuffled = [...wordsPool].sort(() => 0.5 - Math.random());
+    State.memoryGame.targetWords = shuffled.slice(0, 5);
+    const distractors = shuffled.slice(5, 20);
+    currentWorkingMemoryChoices = [...State.memoryGame.targetWords, ...distractors].sort(() => 0.5 - Math.random());
+  }
 
   const gridContainer = document.getElementById("memory-grid-container");
   if (gridContainer && currentWorkingMemoryChoices) {
+    gridContainer.style.display = "grid";
     gridContainer.innerHTML = currentWorkingMemoryChoices.map(w =>
       `<button type="button" class="memory-btn" data-word="${w}">${w}</button>`
     ).join("");
+  }
+
+  const submitBtn = document.getElementById("memory-submit-btn");
+  if (submitBtn) {
+    submitBtn.style.display = "inline-flex";
+    submitBtn.disabled = false;
   }
 
   if (State.assessmentMode === "voice" || State.assessmentMode === "video") {
@@ -1886,7 +1948,7 @@ function startMemorySelectionTimer() {
   if (memorySelectionTimerInterval) clearInterval(memorySelectionTimerInterval);
   let selectTimeLeft = 45;
   const timerEl = document.getElementById("memory-game-timer-text");
-  if (timerEl) timerEl.textContent = `${t("time_remaining", State.lang)}: 45s`;
+  if (timerEl) { timerEl.style.display = "block"; timerEl.textContent = `${t("time_remaining", State.lang)}: 45s`; }
 
   memorySelectionTimerInterval = setInterval(() => {
     selectTimeLeft--;
@@ -2929,7 +2991,7 @@ async function buildReport(videoBlob = null) {
     }
 
     // Hydrate Individual Matrix Results & Age-Calibrated Baselines
-    const patDisplay = hasPat ? `${patScore}% (${Number.isFinite(State.biomarkers.patternCorrect) ? State.biomarkers.patternCorrect : 0}/${State.biomarkers.patternTotal || 12})` : t("metric_unavailable", State.lang);
+    const patDisplay = hasPat ? `${patScore}% (${Number.isFinite(State.biomarkers.patternCorrect) ? State.biomarkers.patternCorrect : 0}/${State.biomarkers.patternTotal || 3})` : t("metric_unavailable", State.lang);
     setElem("rep-matrix-pat", patDisplay);
     setElem("rep-matrix-mem", hasMem ? `${memScore}%` : t("metric_unavailable", State.lang));
     setElem("rep-matrix-clock", hasClk ? `${clkRaw}/10` : t("metric_unavailable", State.lang));

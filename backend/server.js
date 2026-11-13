@@ -56,15 +56,16 @@ app.use('/api', assessmentRoutes);
 app.post('/api/predict', authMiddleware, async (req, res) => {
   try {
     const scoresObj = req.body.scores && typeof req.body.scores === 'object' ? req.body.scores : {};
-    const memory_score = req.body.memory_score !== undefined ? req.body.memory_score : (scoresObj.memoryScore !== undefined ? scoresObj.memoryScore : scoresObj.memory_score);
-    const pattern_score = req.body.pattern_score !== undefined ? req.body.pattern_score : (scoresObj.patternScore !== undefined ? scoresObj.patternScore : scoresObj.pattern_score);
+    const rawMem = req.body.memory_score !== undefined ? req.body.memory_score : (req.body.immediate_recall_score !== undefined ? (Number(req.body.immediate_recall_score) <= 5 ? Number(req.body.immediate_recall_score) * 20 : req.body.immediate_recall_score) : (scoresObj.memoryScore !== undefined ? scoresObj.memoryScore : (scoresObj.memory_score !== undefined ? scoresObj.memory_score : scoresObj.immediate_recall_score)));
+    const memory_score = rawMem;
+    const pattern_score = req.body.pattern_score !== undefined ? req.body.pattern_score : (req.body.pattern_matching_score !== undefined ? req.body.pattern_matching_score : (scoresObj.patternScore !== undefined ? scoresObj.patternScore : (scoresObj.pattern_score !== undefined ? scoresObj.pattern_score : scoresObj.pattern_matching_score)));
     const clock_score = req.body.clock_score !== undefined ? req.body.clock_score : (scoresObj.clockScore !== undefined ? scoresObj.clockScore : scoresObj.clock_score);
-    const avg_reaction_time_ms = req.body.avg_reaction_time_ms !== undefined ? req.body.avg_reaction_time_ms : (scoresObj.reactionTimeMs !== undefined ? scoresObj.reactionTimeMs : (scoresObj.reactionTime !== undefined ? scoresObj.reactionTime : scoresObj.avg_reaction_time_ms));
+    const avg_reaction_time_ms = req.body.avg_reaction_time_ms !== undefined ? req.body.avg_reaction_time_ms : (req.body.reaction_median_ms !== undefined ? req.body.reaction_median_ms : (scoresObj.reactionTimeMs !== undefined ? scoresObj.reactionTimeMs : (scoresObj.reactionTime !== undefined ? scoresObj.reactionTime : (scoresObj.avg_reaction_time_ms !== undefined ? scoresObj.avg_reaction_time_ms : scoresObj.reaction_median_ms))));
     const reaction_trials = req.body.reaction_trials !== undefined ? req.body.reaction_trials : (scoresObj.reactionTrials !== undefined ? scoresObj.reactionTrials : scoresObj.reaction_trials);
-    const words_per_minute = req.body.words_per_minute !== undefined ? req.body.words_per_minute : (scoresObj.avgTypingWPM !== undefined ? scoresObj.avgTypingWPM : scoresObj.words_per_minute);
+    const words_per_minute = req.body.words_per_minute !== undefined ? req.body.words_per_minute : (req.body.word_identifying_score !== undefined ? req.body.word_identifying_score : (scoresObj.avgTypingWPM !== undefined ? scoresObj.avgTypingWPM : (scoresObj.words_per_minute !== undefined ? scoresObj.words_per_minute : scoresObj.word_identifying_score)));
     const age = req.body.age !== undefined ? req.body.age : scoresObj.age;
     const facial_apathy_score = req.body.facial_apathy_score !== undefined ? req.body.facial_apathy_score : scoresObj.facial_apathy_score;
-    const gaze_smoothness = req.body.gaze_smoothness !== undefined ? req.body.gaze_smoothness : scoresObj.gaze_smoothness;
+    const gaze_smoothness = req.body.gaze_smoothness !== undefined ? req.body.gaze_smoothness : (req.body.oculomotor_score !== undefined ? req.body.oculomotor_score : (scoresObj.gaze_smoothness !== undefined ? scoresObj.gaze_smoothness : scoresObj.oculomotor_score));
 
     const hasMem = memory_score !== null && memory_score !== undefined && memory_score !== "" && Number.isFinite(Number(memory_score)) && Number(memory_score) >= 0 && Number(memory_score) <= 100;
     const hasPat = pattern_score !== null && pattern_score !== undefined && pattern_score !== "" && Number.isFinite(Number(pattern_score)) && Number(pattern_score) >= 0 && Number(pattern_score) <= 100;
@@ -86,10 +87,10 @@ app.post('/api/predict', authMiddleware, async (req, res) => {
       // Forward the payload to the FastAPI ML microservice
       // Use ML_SERVICE_URL if provided, else default to localhost:8000
       const mlBaseUrl = (process.env.ML_SERVICE_URL || 'http://localhost:8000').replace(/\/$/, '');
-      
+
       const abortController = new AbortController();
       const timeout = setTimeout(() => abortController.abort(), 35000); // 35s timeout to allow Render ML service cold start
-      
+
       const response = await fetch(`${mlBaseUrl}/predict`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -108,9 +109,9 @@ app.post('/api/predict', authMiddleware, async (req, res) => {
           gaze_smoothness: gaze_smoothness != null ? Number(gaze_smoothness) : null
         })
       });
-      
+
       clearTimeout(timeout);
-      
+
       if (response.ok) {
         const result = await response.json();
         if (result && typeof result === 'object') {
@@ -120,7 +121,7 @@ app.post('/api/predict', authMiddleware, async (req, res) => {
     } catch (svcErr) {
       console.log('ML Microservice offline or timeout, utilizing calibrated analytical engine:', svcErr.message);
     }
-    
+
     // Calibrated Explainable Multimodal Scoring Fallback
     // Only calculate weighted composite across available measured domains
     let weightedSum = 0;
@@ -164,7 +165,7 @@ app.post('/api/predict', authMiddleware, async (req, res) => {
     const hasSufficientData = totalWeight >= 0.35;
     const compositeVitality = hasSufficientData ? Math.round(weightedSum / totalWeight) : null;
     const ageCategory = reactionEval.ageGroup || (userAge <= 20 ? "≤20 years" : (userAge <= 50 ? "21–50 years" : (userAge <= 70 ? "51–70 years" : "71–100 years")));
-    
+
     let performanceTier = "Unavailable";
     let tierExplanation = "Insufficient assessment data to calculate a reliable composite score.";
     let rxInterp = greenTargetResponse.classification;

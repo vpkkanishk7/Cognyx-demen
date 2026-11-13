@@ -205,7 +205,7 @@ router.post('/analyze-behavior', authMiddleware, async (req, res) => {
   const timeout = setTimeout(() => abortController.abort(), 15000);
 
   try {
-    const model = genAI.getGenerativeModel({ model: "gemini-1.5-pro" });
+    const model = genAI.getGenerativeModel({ model: process.env.GEMINI_MODEL || "gemini-2.5-flash" });
     const prompt = "You are a behavioral analysis assistant. Analyze the user's eye-tracking telemetry vectors. \nTelemetry data (sampled): " + JSON.stringify(telemetry.slice(0, 100)) + "\n\nExtract and score only the OCULOMOTOR metric from 0 to 100 based on gaze stability and fixations. Do not invent FACIAL_AFFECT, KINEMATIC, or LINGUISTIC_ACOUSTIC since audio and full video are absent.";
 
     const result = await model.generateContent({
@@ -419,29 +419,53 @@ IMPORTANT GUIDELINES:
 
     const groqModel = process.env.GROQ_MODEL || "openai/gpt-oss-20b";
     
-    const groqPromise = groq.chat.completions.create({
-      messages: [{ role: "user", content: prompt }],
-      model: groqModel,
-      response_format: { type: "json_object" }
-    });
+    let rawJson = null;
+    let sourceUsed = "groq";
 
-    const timeoutPromise = new Promise((_, reject) => 
-      setTimeout(() => reject(new Error("Groq report generation timed out")), 6000)
-    );
+    try {
+      const groqPromise = groq.chat.completions.create({
+        messages: [{ role: "user", content: prompt }],
+        model: groqModel,
+        response_format: { type: "json_object" }
+      });
 
-    const result = await Promise.race([groqPromise, timeoutPromise]);
+      const timeoutPromise = new Promise((_, reject) => 
+        setTimeout(() => reject(new Error("Groq report generation timed out")), 12000)
+      );
 
-    const rawJson = safeParse(result.choices[0].message.content, null);
+      const result = await Promise.race([groqPromise, timeoutPromise]);
+      rawJson = safeParse(result.choices[0].message.content, null);
+    } catch (groqErr) {
+      console.warn("Groq report notice, trying Gemini failover:", groqErr.message);
+      try {
+        const geminiModel = genAI.getGenerativeModel({
+          model: process.env.GEMINI_MODEL || "gemini-2.5-flash",
+          generationConfig: { responseMimeType: "application/json" }
+        });
+        const geminiRes = await geminiModel.generateContent(prompt);
+        rawJson = safeParse(geminiRes.response.text(), null);
+        sourceUsed = "gemini";
+      } catch (geminiErr) {
+        console.error("Gemini report failover also failed:", geminiErr.message);
+      }
+    }
+
     if (!rawJson || typeof rawJson !== 'object') {
       simulateOfflineReport();
     } else {
       if (!rawJson.summary) {
-        rawJson.summary = rawJson.executive_summary || rawJson.clinical_summary || rawJson.overview || rawJson.report?.summary || `Cognitive wellness screening for ${username} indicates a Dementia-Associated Screening Probability of ${probDisplay} (Risk Level: ${safeRiskLevel}).`;
+        rawJson.summary = rawJson.executive_summary || rawJson.clinical_summary || rawJson.overview || rawJson.report?.summary || `Cognitive wellness screening for ${username} indicates an Estimated Cognitive Impairment Risk of ${probDisplay} (Risk Level: ${safeRiskLevel}).`;
       }
-      res.json({ report: rawJson, analysis_source: "groq" });
+      if (!rawJson.dementia_screening_probability) {
+        rawJson.dementia_screening_probability = probDisplay;
+      }
+      if (!rawJson.overall_risk_score) {
+        rawJson.overall_risk_score = safeRiskLevel;
+      }
+      res.json({ report: rawJson, analysis_source: sourceUsed });
     }
   } catch (err) {
-    console.error("Groq Final Report API notice (fallback activated):", err.message);
+    console.error("Final Report API notice (offline fallback activated):", err.message);
     simulateOfflineReport();
   }
 });

@@ -68,11 +68,16 @@ def load_model():
 
 class MultimodalBiomarkerPayload(BaseModel):
     # Core Cognitive Scores
-    memory_score: float | None = 85.0
-    pattern_score: float | None = 88.0
-    clock_score: float | None = 8.5
-    avg_reaction_time_ms: float | None = 350.0
-    words_per_minute: float | None = 125.0
+    memory_score: float | None = None
+    immediate_recall_score: float | None = None
+    delayed_recall_score: float | None = None
+    pattern_score: float | None = None
+    pattern_matching_score: float | None = None
+    clock_score: float | None = None
+    avg_reaction_time_ms: float | None = None
+    reaction_median_ms: float | None = None
+    words_per_minute: float | None = None
+    word_identifying_score: float | None = None
     age: float | None = 65.0
     gender: str | None = "female"
     educationyears: float | None = 12.0
@@ -87,6 +92,7 @@ class MultimodalBiomarkerPayload(BaseModel):
     vocabulary_richness: float | None = 82.0
     eye_wander_count: float | None = 8.0
     gaze_smoothness: float | None = None
+    oculomotor_score: float | None = None
     facial_apathy_score: float | None = None
     answer_accuracy: float | None = 90.0
 
@@ -103,11 +109,24 @@ def get_model_metrics():
 @app.post("/predict")
 def predict_cognition(data: MultimodalBiomarkerPayload):
     # 1. Clean and validate inputs
-    mem = float(data.memory_score if data.memory_score is not None else 85.0)
-    pat = float(data.pattern_score if data.pattern_score is not None else 88.0)
+    mem_input = data.memory_score
+    if mem_input is None:
+        if data.immediate_recall_score is not None:
+            mem_input = (data.immediate_recall_score * 20.0) if data.immediate_recall_score <= 5 else data.immediate_recall_score
+        elif data.delayed_recall_score is not None:
+            mem_input = (data.delayed_recall_score * 20.0) if data.delayed_recall_score <= 5 else data.delayed_recall_score
+    mem = float(mem_input if mem_input is not None else 85.0)
+
+    pat_input = data.pattern_score if data.pattern_score is not None else data.pattern_matching_score
+    pat = float(pat_input if pat_input is not None else 88.0)
+
     clk = float(data.clock_score if data.clock_score is not None else 8.5)
-    rt = float(data.avg_reaction_time_ms if data.avg_reaction_time_ms is not None else 350.0)
-    wpm = float(data.words_per_minute if data.words_per_minute is not None else 125.0)
+
+    rt_input = data.avg_reaction_time_ms if data.avg_reaction_time_ms is not None else data.reaction_median_ms
+    rt = float(rt_input if rt_input is not None else 350.0)
+
+    wpm_input = data.words_per_minute if data.words_per_minute is not None else data.word_identifying_score
+    wpm = float(wpm_input if wpm_input is not None else 125.0)
     user_age = float(data.age if data.age is not None else 65.0)
     gender = str(data.gender if data.gender in ["male", "female"] else "female")
     edu_years = float(data.educationyears if data.educationyears is not None else 12.0)

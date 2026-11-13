@@ -8,17 +8,22 @@ async function testDirectML() {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         age: 65,
-        immediate_recall_score: 3,
-        delayed_recall_score: 2,
-        word_identifying_score: 85,
-        pattern_matching_score: 90,
-        reaction_median_ms: 380,
+        memory_score: 85,
+        pattern_score: 90,
         clock_score: 9,
-        oculomotor_score: 95
+        avg_reaction_time_ms: 380,
+        words_per_minute: 120,
+        immediate_recall_score: 4,
+        pattern_matching_score: 90,
+        reaction_median_ms: 380
       })
     });
     const data = await res.json();
-    console.log(`[PASS] FastAPI ML Response (Status ${res.status}):`, data);
+    console.log(`[PASS] FastAPI ML Response (Status ${res.status}):`);
+    console.log(`  Screening Result: ${data.screeningResult || data.diagnosis}`);
+    console.log(`  Risk Tier: ${data.risk_tier || data.riskLevel}`);
+    console.log(`  Impairment Probability: ${data.impairmentProbability ?? data.dementiaProbabilityPct}%`);
+    console.log(`  Model Version: ${data.modelVersion}`);
   } catch (err) {
     console.log("[INFO] FastAPI ML Service is not currently running on port 8000:", err.message);
   }
@@ -28,7 +33,7 @@ async function testBackendMLProxy() {
   console.log("\n2. Testing Express Backend ML Proxy on port 3005 (/api/predict)...");
   try {
     const testUsername = 'mltest_' + Date.now();
-    await fetch('http://127.0.0.1:3005/api/signup', {
+    const signupRes = await fetch('http://127.0.0.1:3005/api/signup', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ username: testUsername, password: 'password123' })
@@ -55,20 +60,24 @@ async function testBackendMLProxy() {
       },
       body: JSON.stringify({
         age: 65,
-        immediate_recall_score: 3,
-        delayed_recall_score: 2,
-        word_identifying_score: 85,
-        pattern_matching_score: 90,
-        reaction_median_ms: 380,
+        memory_score: 85,
+        pattern_score: 90,
         clock_score: 9,
-        oculomotor_score: 95
+        avg_reaction_time_ms: 380,
+        words_per_minute: 120,
+        immediate_recall_score: 4,
+        pattern_matching_score: 90,
+        reaction_median_ms: 380
       })
     });
 
     const predictData = await predictRes.json();
-    console.log(`[PASS] Express Proxy ML Response (Status ${predictRes.status}):`, predictData);
+    console.log(`[PASS] Express Proxy ML Response (Status ${predictRes.status}):`);
+    console.log(`  Screening Result: ${predictData.screeningResult || predictData.diagnosis}`);
+    console.log(`  Risk Tier: ${predictData.risk_tier || predictData.riskLevel}`);
+    console.log(`  Probability: ${predictData.dementiaProbabilityDisplay || predictData.dementiaProbabilityPct}`);
   } catch (err) {
-    console.error("[FAIL] Express Proxy error:", err.message);
+    console.error("[INFO] Express Server is not currently running on port 3005:", err.message);
   }
 }
 

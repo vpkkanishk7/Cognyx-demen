@@ -974,6 +974,7 @@ input[type="password"]::placeholder {
    LIVE VIDEO FEED & TELEMETRY WEBCAM
 ═══════════════════════════════════════════════════════════════ */
 #live-video-feed {
+  display: none !important;
   position: fixed;
   top: 84px;
   right: 24px;
@@ -987,12 +988,13 @@ input[type="password"]::placeholder {
   background: #000;
 }
 
+#video-container,
 .video-feed {
-  position: fixed;
-  top: 80px;
-  right: 20px;
-  width: 140px;
-  height: 95px;
+  position: fixed !important;
+  top: 80px !important;
+  right: 20px !important;
+  width: 140px !important;
+  height: 95px !important;
   border-radius: var(--radius-sm);
   border: 2px solid rgba(14, 165, 233, 0.4);
   overflow: hidden;
@@ -1001,10 +1003,26 @@ input[type="password"]::placeholder {
   z-index: 1100;
 }
 
+#video-container video,
 .video-feed video {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
+  width: 100% !important;
+  height: 100% !important;
+  object-fit: cover !important;
+}
+
+#video-container.hidden {
+  display: none !important;
+}
+
+#webgazerVideoContainer,
+#webgazerVideoFeed,
+#webgazerFaceOverlay,
+#webgazerFaceFeedbackBox,
+#webgazerGazeDot {
+  display: none !important;
+  visibility: hidden !important;
+  opacity: 0 !important;
+  pointer-events: none !important;
 }
 
 .recording-indicator {
